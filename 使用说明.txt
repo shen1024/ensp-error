@@ -1,0 +1,132 @@
+﻿eNSP 错误 40 一键修复工具 v1.0.0
+=====================================
+
+适用场景
+--------
+在 Windows 上使用华为 eNSP 时，启动 AR 路由器 / AC / WLAN 设备报“错误代码 40”。
+常见原因是：
+  · Windows 的“基于虚拟化的安全性”（VBS）、Hyper-V、虚拟机平台、Windows 沙盒
+    与 VirtualBox 抢占 CPU 虚拟化（VT-x / AMD-V）；
+  · VirtualBox 版本与 eNSP 不匹配；
+  · VirtualBox Host-Only 网卡不是 192.168.56.1 / 255.255.255.0，或 DHCP 未关闭；
+  · 防火墙拦截、组件安装残缺、eNSP 未注册设备。
+
+本工具做什么
+------------
+1. 检测 VBS、Hyper-V、内核隔离、VirtualBox、Host-Only 网卡、DHCP、eNSP 组件；
+2. 在用户确认后，用 bcdedit、注册表和 DISM 关闭 VBS / Hyper-V 冲突；
+3. 将 VirtualBox Host-Only 网卡修复为 192.168.56.1/24，并关闭其 DHCP；
+4. 确保 NatNetwork 存在并启用，启动 VirtualBox 驱动服务；
+5. 添加 eNSP / VirtualBox 的 Windows 防火墙入站规则；
+6. 根据用户选择安装或卸载内置的四个组件；
+7. 生成诊断报告和详细日志，方便反馈。
+
+本工具不需要联网。安装包已经内置在 payload 文件夹中。
+
+系统要求
+--------
+· Windows 10 / Windows 11（64 位），Windows 7/8 未测试；
+· 管理员权限（启动时会弹 UAC）；
+· .NET Framework 4.x（Windows 10/11 自带）；
+· 约 3 GB 可用磁盘空间（安装 eNSP 等组件时）。
+
+快速开始
+--------
+1. 将整个 eNSP40Fixer 文件夹复制到本机（不要只复制 exe）；
+2. 关闭正在运行的 eNSP 和 VirtualBox，导出/保存实验拓扑；
+3. 双击“eNSP错误40修复工具.exe”，在 UAC 提示中选择“是”；
+4. 如果机器上已经装了 eNSP 和 VirtualBox：
+   · 先选择“修复现有环境（推荐）”，点击“开始处理”；
+   · 按提示关闭 VBS/Hyper-V，完成后重启 Windows；
+   · 重启后再次打开工具，点击一次“开始处理”，完成 VirtualBox 网卡配置；
+   · 打开 eNSP → 菜单 → 工具 → 注册设备 → 全选 → 注册；
+   · 再启动 AR 路由器测试。
+5. 如果机器上还没有 eNSP，或版本明显不匹配：
+   · 选择“安装 / 补齐内置组件”，或“卸载旧版并全新安装”。
+6. 如果仍报 40：
+   · 在主页右侧点击“仍然报 40：卸载并重装”，
+     工具会自动卸载现有组件并安装内置兼容套装。
+
+重要说明：WinPcap
+-----------------
+WinPcap 4.1.3 官方安装器不支持静默安装，因此安装/卸载 WinPcap 时会弹出它自己的
+向导。请按向导点击：
+  安装：Next → I Agree → Install → Finish
+  卸载：按向导确认删除
+其余组件（Wireshark、VirtualBox、eNSP）使用静默安装。
+
+VBS / Hyper-V 风险
+------------------
+关闭 VBS/Hyper-V 会同时停用或影响：
+  · WSL2
+  · Docker Desktop
+  · Windows 沙盒
+  · 内核隔离 / 内存完整性
+  · 部分依赖 Hyper-V 的模拟器或安全功能
+工具在操作前会再次确认，并且不会自动重启电脑。
+
+需要恢复时，以管理员身份运行：
+  bcdedit /set hypervisorlaunchtype auto
+然后在“启用或关闭 Windows 功能”中重新勾选 Hyper-V / 虚拟机平台，重启电脑。
+
+工具不会删除你的 eNSP 工程文件，但“卸载 eNSP”本身可能会删除工程或配置。
+全新安装前请务必导出/备份实验拓扑。
+
+文件和目录
+----------
+  eNSP错误40修复工具.exe     主程序（需要管理员权限）
+  payload\ENSP_Setup.exe                          eNSP 1.3.00.100
+  payload\VirtualBox-5.2.44-139111-Win.exe        VirtualBox 5.2.44
+  payload\WinPcap_4_1_3.exe                       WinPcap 4.1.3
+  payload\Wireshark-win64-3.4.8.exe               Wireshark 3.4.8
+  使用说明.txt               本文件
+  第三方组件说明.txt         版权与来源说明
+  SHA256SUMS.txt             文件完整性校验值
+
+日志与诊断
+----------
+日志默认保存在：
+  C:\ProgramData\eNSP40Fixer\Logs\
+如果该目录不可写，会回退到当前用户的本地临时目录。
+
+在“环境诊断”页可以：
+  · 重新检测；
+  · 复制报告；
+  · 导出报告。
+反馈问题时，请附上：
+  · 导出的诊断报告；
+  · 最近一次日志；
+  · msinfo32 截图（尤其是“基于虚拟化的安全性”一行）。
+
+常见问题
+--------
+Q：程序提示“Windows 已保护你的电脑”？
+A：本程序没有购买代码签名证书，Windows SmartScreen 可能拦截。可点击“更多信息”
+   →“仍要运行”。请先核对 SHA256SUMS.txt。
+
+Q：安装完成但仍报 40？
+A：先重启 Windows。重启后再次运行工具，让工具完成 Host-Only 网卡配置；然后在
+  eNSP 中“工具 → 注册设备”。若仍失败，使用“仍然报 40”进行全新安装。
+  VirtualBox 6/7、eNSP 1.2 等版本组合很容易报 40。
+
+Q：工具能保证 100% 修复吗？
+A：不能。VBS/Hyper-V 冲突是错误 40 的最常见原因，但 Windows 版本、驱动、
+  第三方安全软件、AMD/Intel 平台差异都可能影响。工具会尽量检测并记录。
+  Windows 11 较新版本对 VirtualBox 5.2.44 的兼容性有限。
+
+Q：会不会上传我的数据？
+A：不会。工具完全离线运行。只有你点击“发送求助邮件”时，才会调用系统默认
+  邮件客户端，把邮件内容交给邮件客户端发送。
+
+支持邮箱
+--------
+2152719796@qq.com
+请在邮件中说明：Windows 版本、eNSP/VirtualBox 版本、错误现象，并附上日志、
+诊断报告和 msinfo32 截图。
+
+开发验证说明
+------------
+本版本在 Windows 10 专业版 22H2（Build 19045.3803）上完成编译，并验证了：
+界面启动、系统/组件检测、VBoxManage 状态读取、安装包 SHA256 校验、诊断报告。
+系统级安装/卸载、关闭 VBS/Hyper-V 需要管理员权限，建议首次在测试机或虚拟机
+快照中执行。卸载/安装组件前请导出实验拓扑。
